@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nutrición">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23378ADD' width='180' height='180' rx='40'/><text x='90' y='95' font-size='90' text-anchor='middle' dominant-baseline='middle'>🥗</text></svg>">
+    <title>Nutrition Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif; color: #333; background: #f5f5f5; }
+        .container { max-width: 100%; padding: 1rem 0; }
+        .header { padding: 1rem 1.25rem; border-bottom: 0.5px solid #e0e0e0; margin-bottom: 1rem; background: #fff; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .header h1 { font-size: 20px; font-weight: 500; }
+        .header-date { font-size: 13px; color: #999; }
+        .date-nav { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #999; }
+        .date-nav button { background: none; border: none; color: #999; cursor: pointer; padding: 4px 8px; }
+        .nav-tabs { display: flex; gap: 4px; margin-top: 0.75rem; border-top: 0.5px solid #e0e0e0; padding-top: 0.75rem; }
+        .nav-tabs button { background: none; border: none; padding: 6px 12px; font-size: 13px; color: #999; cursor: pointer; border-bottom: 2px solid transparent; }
+        .nav-tabs button.active { color: #333; border-bottom-color: #333; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 1.25rem; margin-bottom: 1.5rem; }
+        .stat-card { background: #f9f9f9; padding: 12px; border-radius: 8px; }
+        .stat-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .stat-value { font-size: 22px; font-weight: 500; }
+        .macro-chart { height: 160px; margin: 0 1.25rem 1.5rem; }
+        .section { padding: 1rem 1.25rem; margin-bottom: 1rem; border-top: 0.5px solid #e0e0e0; background: #fff; }
+        .section h2 { font-size: 14px; font-weight: 500; margin-bottom: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meal { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+        .meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .meal-title { font-size: 15px; font-weight: 500; }
+        .plate { background: #f9f9f9; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .plate-delete { background: none; border: none; color: #999; cursor: pointer; font-size: 16px; padding: 0 4px; }
+        .btn { background: #fff; border: 0.5px solid #e0e0e0; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .btn:hover { background: #f9f9f9; }
+        .btn-primary { background: #378ADD; color: #fff; border: none; }
+        .btn-primary:hover { background: #2970c4; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; margin-bottom: 4px; color: #666; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 0.5px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: #fff; color: #333; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        .modal-header { font-size: 18px; font-weight: 500; margin-bottom: 1rem; }
+        .modal-footer { display: flex; gap: 8px; margin-top: 1.5rem; }
+        .modal-footer button { flex: 1; padding: 10px; }
+        .macros-display { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+        .macro { font-size: 12px; text-align: center; }
+        .macro-val { font-size: 14px; font-weight: 500; }
+        .saved-dishes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+        .saved-dish { background: #f9f9f9; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 10px; cursor: pointer; text-align: center; font-size: 12px; transition: all 0.2s; }
+        .saved-dish:hover { border-color: #ccc; background: #fff; }
+        .saved-dish-name { font-weight: 500; margin-bottom: 6px; }
+        .saved-dish-info { font-size: 11px; color: #999; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 0.5px solid #e0e0e0; }
+        .tab-btn { background: none; border: none; padding: 8px 12px; font-size: 13px; color: #999; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #333; border-bottom-color: #333; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .weight-entry { background: #f9f9f9; border: 0.5px solid #e0e0e0; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .weight-value { font-size: 18px; font-weight: 500; }
+        .weight-date { font-size: 12px; color: #999; }
+        .micro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+        .micro-card { background: #f9f9f9; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 12px; }
+        .micro-name { font-size: 12px; color: #999; margin-bottom: 4px; font-weight: 500; }
+        .micro-current { font-size: 16px; font-weight: 500; }
+        .micro-goal { font-size: 11px; color: #999; margin-top: 2px; }
+        .micro-bar { width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .micro-fill { height: 100%; background: #378ADD; border-radius: 2px; }
+        .weight-chart { height: 200px; margin: 0 1.25rem 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>Nutrición</h1>
+                <div class="header-date" id="fullDate">Lunes, 15 Jun 2026</div>
+            </div>
+            <div class="date-nav">
+                <button onclick="prevDay()">←</button>
+                <span id="dateDisplay">Hoy</span>
+                <button onclick="nextDay()">→</button>
+            </div>
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchPage('nutrition')">Nutrición</button>
+                <button class="nav-tab" onclick="switchPage('weight')">Peso</button>
+                <button class="nav-tab" onclick="switchPage('micros')">Micros</button>
+            </div>
+        </div>
+
+        <!-- NUTRITION PAGE -->
+        <div id="nutrition" class="page active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Calorías</div>
+                    <div class="stat-value"><span id="totalCals">0</span> <span style="font-size: 14px; color: #999;">/ 2200</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Proteína</div>
+                    <div class="stat-value"><span id="totalProtein">0</span>g</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Carbos</div>
+                    <div class="stat-value"><span id="totalCarbs">0</span>g</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Grasas</div>
+                    <div class="stat-value"><span id="totalFats">0</span>g</div>
+                </div>
+            </div>
+
+            <div class="macro-chart">
+                <canvas id="macroChart"></canvas>
+            </div>
+
+            <div class="section">
+                <h2>Desayuno</h2>
+                <div id="breakfast-meals"></div>
+                <button class="btn" onclick="openAddPlateModal('breakfast')">+ Agregar platillo</button>
+            </div>
+
+            <div class="section">
+                <h2>Almuerzo</h2>
+                <div id="lunch-meals"></div>
+                <button class="btn" onclick="openAddPlateModal('lunch')">+ Agregar platillo</button>
+            </div>
+
+            <div class="section">
+                <h2>Comida</h2>
+                <div id="dinner-meals"></div>
+                <button class="btn" onclick="openAddPlateModal('dinner')">+ Agregar platillo</button>
+            </div>
+
+            <div class="section">
+                <h2>Snacks</h2>
+                <div id="snacks-meals"></div>
+                <button class="btn" onclick="openAddPlateModal('snacks')">+ Agregar platillo</button>
+            </div>
+        </div>
+
+        <!-- WEIGHT PAGE -->
+        <div id="weight" class="page">
+            <div style="padding: 1rem 1.25rem;">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="openWeightModal()">+ Registrar peso</button>
+            </div>
+
+            <div class="weight-chart">
+                <canvas id="weightChart"></canvas>
+            </div>
+
+            <div class="section">
+                <h2>Historial</h2>
+                <div id="weightHistory"></div>
+            </div>
+        </div>
+
+        <!-- MICROS PAGE -->
+        <div id="micros" class="page">
+            <div style="padding: 1rem 1.25rem;">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="openMicroModal()">⚙ Configurar metas</button>
+            </div>
+
+            <div class="section">
+                <h2>Hoy</h2>
+                <div class="micro-grid" id="microcardsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD PLATE MODAL -->
+    <div class="modal" id="addPlateModal">
+        <div class="modal-content">
+            <div class="modal-header">Agregar a la comida</div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('quick')">Rápido</button>
+                <button class="tab-btn" onclick="switchTab('custom')">Personalizado</button>
+                <button class="tab-btn" onclick="switchTab('manage')">Guardar</button>
+            </div>
+
+            <div id="quick" class="tab-content active">
+                <div class="saved-dishes" id="savedDishesContainer"></div>
+            </div>
+
+            <div id="custom" class="tab-content">
+                <form id="plateForm">
+                    <div class="form-group">
+                        <label>Nombre del platillo</label>
+                        <input type="text" id="plateName" placeholder="e.g. Pollo a la salsa" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Calorías</label>
+                        <input type="number" id="plateCalories" placeholder="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Proteína (g)</label>
+                        <input type="number" id="plateProtein" placeholder="0" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Carbohidratos (g)</label>
+                        <input type="number" id="plateCarbs" placeholder="0" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Grasas (g)</label>
+                        <input type="number" id="plateFats" placeholder="0" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Micronutrientes (opcional)</label>
+                        <input type="text" id="plateMicros" placeholder="e.g. Fe: 2.5mg, Vit C: 30mg">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Agregar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="manage" class="tab-content">
+                <div style="margin-bottom: 12px;">
+                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="switchToCreateDish()">Crear nuevo platillo</button>
+                </div>
+                <div style="font-size: 13px; color: #999; margin-bottom: 12px;">Mis platillos guardados:</div>
+                <div id="manageDishesContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE DISH MODAL -->
+    <div class="modal" id="createDishModal">
+        <div class="modal-content">
+            <div class="modal-header">Crear platillo</div>
+            <form id="createDishForm">
+                <div class="form-group">
+                    <label>Nombre del platillo</label>
+                    <input type="text" id="dishName" placeholder="e.g. Huevos con jamón" required>
+                </div>
+                <div class="form-group">
+                    <label>Calorías</label>
+                    <input type="number" id="dishCalories" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Proteína (g)</label>
+                    <input type="number" id="dishProtein" placeholder="0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Carbohidratos (g)</label>
+                    <input type="number" id="dishCarbs" placeholder="0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Grasas (g)</label>
+                    <input type="number" id="dishFats" placeholder="0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Micronutrientes (opcional)</label>
+                    <input type="text" id="dishMicros" placeholder="e.g. Fe: 2.5mg, Vit C: 30mg">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeDishModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- WEIGHT MODAL -->
+    <div class="modal" id="weightModal">
+        <div class="modal-content">
+            <div class="modal-header">Registrar peso</div>
+            <form id="weightForm">
+                <div class="form-group">
+                    <label>Peso (kg)</label>
+                    <input type="number" id="weightValue" placeholder="0.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="weightDate" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeWeightModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MICRO SETTINGS MODAL -->
+    <div class="modal" id="microModal">
+        <div class="modal-content">
+            <div class="modal-header">Metas de micronutrientes</div>
+            <form id="microForm">
+                <div class="form-group">
+                    <label>Hierro (mg)</label>
+                    <input type="number" id="ironGoal" placeholder="8" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Vitamina C (mg)</label>
+                    <input type="number" id="vitcGoal" placeholder="90" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Vitamina D (mcg)</label>
+                    <input type="number" id="vitdGoal" placeholder="20" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Calcio (mg)</label>
+                    <input type="number" id="calciumGoal" placeholder="1000" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Sodio (mg)</label>
+                    <input type="number" id="sodiumGoal" placeholder="2300" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Potasio (mg)</label>
+                    <input type="number" id="potassiumGoal" placeholder="3500" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Magnesio (mg)</label>
+                    <input type="number" id="magnesiumGoal" placeholder="400" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Zinc (mg)</label>
+                    <input type="number" id="zincGoal" placeholder="11" step="0.1">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeMicroModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        let currentDate = new Date();
+        let currentMeal = null;
+        let nutritionData = {};
+        let savedDishes = {};
+        let weightData = {};
+        let microGoals = {};
+        let macroChart = null;
+        let weightChart = null;
+
+        const defaultMicroGoals = {
+            iron: 8,
+            vitc: 90,
+            vitd: 20,
+            calcium: 1000,
+            sodium: 2300,
+            potassium: 3500,
+            magnesium: 400,
+            zinc: 11
+        };
+
+        function getDateKey(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('nutritionData');
+            nutritionData = saved ? JSON.parse(saved) : {};
+            const dishes = localStorage.getItem('savedDishes');
+            savedDishes = dishes ? JSON.parse(dishes) : {};
+            const weight = localStorage.getItem('weightData');
+            weightData = weight ? JSON.parse(weight) : {};
+            const micros = localStorage.getItem('microGoals');
+            microGoals = micros ? JSON.parse(micros) : defaultMicroGoals;
+        }
+
+        function saveData() {
+            localStorage.setItem('nutritionData', JSON.stringify(nutritionData));
+            localStorage.setItem('savedDishes', JSON.stringify(savedDishes));
+            localStorage.setItem('weightData', JSON.stringify(weightData));
+            localStorage.setItem('microGoals', JSON.stringify(microGoals));
+        }
+
+        function formatDate(date) {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (date.toDateString() === today.toDateString()) return 'Hoy';
+            if (date.toDateString() === yesterday.toDateString()) return 'Ayer';
+            return date.toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        function getFullDate(date) {
+            const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            return date.toLocaleDateString('es-MX', options).replace(/^./, str => str.toUpperCase());
+        }
+
+        function updateDateDisplay() {
+            document.getElementById('dateDisplay').textContent = formatDate(currentDate);
+            document.getElementById('fullDate').textContent = getFullDate(currentDate);
+        }
+
+        function switchPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(pageName).classList.add('active');
+            document.querySelector(`[onclick="switchPage('${pageName}')"]`).classList.add('active');
+            
+            if (pageName === 'weight') renderWeightPage();
+            if (pageName === 'micros') renderMicrosPage();
+        }
+
+        function prevDay() {
+            currentDate.setDate(currentDate.getDate() - 1);
+            updateDateDisplay();
+            renderMeals();
+        }
+
+        function nextDay() {
+            currentDate.setDate(currentDate.getDate() + 1);
+            updateDateDisplay();
+            renderMeals();
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            if (tabName === 'quick') renderSavedDishes();
+            if (tabName === 'manage') renderManagedDishes();
+        }
+
+        function renderSavedDishes() {
+            const container = document.getElementById('savedDishesContainer');
+            const dishes = Object.entries(savedDishes);
+            
+            if (dishes.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999; font-size: 13px;">Sin platillos guardados. Crea uno en la pestaña "Guardar"</div>';
+                return;
+            }
+            
+            container.innerHTML = dishes.map(([id, dish]) => `
+                <div class="saved-dish" onclick="addQuickDish('${id}')">
+                    <div class="saved-dish-name">${dish.name}</div>
+                    <div class="saved-dish-info">${Math.round(dish.calories)} cal<br>${Math.round(dish.protein)}g P</div>
+                </div>
+            `).join('');
+        }
+
+        function renderManagedDishes() {
+            const container = document.getElementById('manageDishesContainer');
+            const dishes = Object.entries(savedDishes);
+            
+            if (dishes.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999; font-size: 13px;">Sin platillos guardados aún</div>';
+                return;
+            }
+            
+            container.innerHTML = dishes.map(([id, dish]) => `
+                <div style="background: #f9f9f9; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 10px;">
+                    <div style="font-weight: 500; margin-bottom: 4px;">${dish.name}</div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 8px;">${Math.round(dish.calories)} cal | ${Math.round(dish.protein)}g P | ${Math.round(dish.carbs)}g C | ${Math.round(dish.fats)}g G</div>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn" style="flex: 1; padding: 6px;" onclick="deleteSavedDish('${id}')">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchToCreateDish() {
+            document.getElementById('addPlateModal').classList.remove('active');
+            document.getElementById('createDishModal').classList.add('active');
+        }
+
+        function openAddPlateModal(mealType) {
+            currentMeal = mealType;
+            document.getElementById('addPlateModal').classList.add('active');
+            renderSavedDishes();
+        }
+
+        function closeModal() {
+            document.getElementById('addPlateModal').classList.remove('active');
+            document.getElementById('plateForm').reset();
+        }
+
+        function closeDishModal() {
+            document.getElementById('createDishModal').classList.remove('active');
+            document.getElementById('createDishForm').reset();
+        }
+
+        function openWeightModal() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('weightDate').value = today;
+            document.getElementById('weightModal').classList.add('active');
+        }
+
+        function closeWeightModal() {
+            document.getElementById('weightModal').classList.remove('active');
+        }
+
+        function openMicroModal() {
+            document.getElementById('ironGoal').value = microGoals.iron || defaultMicroGoals.iron;
+            document.getElementById('vitcGoal').value = microGoals.vitc || defaultMicroGoals.vitc;
+            document.getElementById('vitdGoal').value = microGoals.vitd || defaultMicroGoals.vitd;
+            document.getElementById('calciumGoal').value = microGoals.calcium || defaultMicroGoals.calcium;
+            document.getElementById('sodiumGoal').value = microGoals.sodium || defaultMicroGoals.sodium;
+            document.getElementById('potassiumGoal').value = microGoals.potassium || defaultMicroGoals.potassium;
+            document.getElementById('magnesiumGoal').value = microGoals.magnesium || defaultMicroGoals.magnesium;
+            document.getElementById('zincGoal').value = microGoals.zinc || defaultMicroGoals.zinc;
+            document.getElementById('microModal').classList.add('active');
+        }
+
+        function closeMicroModal() {
+            document.getElementById('microModal').classList.remove('active');
+        }
+
+        function getTodayData() {
+            const key = getDateKey(currentDate);
+            if (!nutritionData[key]) {
+                nutritionData[key] = { breakfast: [], lunch: [], dinner: [], snacks: [] };
+            }
+            return nutritionData[key];
+        }
+
+        document.getElementById('plateForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const plate = {
+                id: Date.now(),
+                name: document.getElementById('plateName').value,
+                calories: parseFloat(document.getElementById('plateCalories').value),
+                protein: parseFloat(document.getElementById('plateProtein').value),
+                carbs: parseFloat(document.getElementById('plateCarbs').value),
+                fats: parseFloat(document.getElementById('plateFats').value),
+                micros: document.getElementById('plateMicros').value || ''
+            };
+            
+            getTodayData()[currentMeal].push(plate);
+            saveData();
+            closeModal();
+            renderMeals();
+        });
+
+        document.getElementById('createDishForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dish = {
+                name: document.getElementById('dishName').value,
+                calories: parseFloat(document.getElementById('dishCalories').value),
+                protein: parseFloat(document.getElementById('dishProtein').value),
+                carbs: parseFloat(document.getElementById('dishCarbs').value),
+                fats: parseFloat(document.getElementById('dishFats').value),
+                micros: document.getElementById('dishMicros').value || ''
+            };
+            
+            const id = 'dish_' + Date.now();
+            savedDishes[id] = dish;
+            saveData();
+            closeDishModal();
+            openAddPlateModal(currentMeal);
+            switchTab('quick');
+        });
+
+        document.getElementById('weightForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const date = document.getElementById('weightDate').value;
+            const weight = parseFloat(document.getElementById('weightValue').value);
+            weightData[date] = weight;
+            saveData();
+            closeWeightModal();
+            renderWeightPage();
+        });
+
+        document.getElementById('microForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            microGoals = {
+                iron: parseFloat(document.getElementById('ironGoal').value) || defaultMicroGoals.iron,
+                vitc: parseFloat(document.getElementById('vitcGoal').value) || defaultMicroGoals.vitc,
+                vitd: parseFloat(document.getElementById('vitdGoal').value) || defaultMicroGoals.vitd,
+                calcium: parseFloat(document.getElementById('calciumGoal').value) || defaultMicroGoals.calcium,
+                sodium: parseFloat(document.getElementById('sodiumGoal').value) || defaultMicroGoals.sodium,
+                potassium: parseFloat(document.getElementById('potassiumGoal').value) || defaultMicroGoals.potassium,
+                magnesium: parseFloat(document.getElementById('magnesiumGoal').value) || defaultMicroGoals.magnesium,
+                zinc: parseFloat(document.getElementById('zincGoal').value) || defaultMicroGoals.zinc
+            };
+            saveData();
+            closeMicroModal();
+            renderMicrosPage();
+        });
+
+        function addQuickDish(dishId) {
+            const dish = savedDishes[dishId];
+            const plate = {
+                id: Date.now(),
+                name: dish.name,
+                calories: dish.calories,
+                protein: dish.protein,
+                carbs: dish.carbs,
+                fats: dish.fats,
+                micros: dish.micros || ''
+            };
+            
+            getTodayData()[currentMeal].push(plate);
+            saveData();
+            closeModal();
+            renderMeals();
+        }
+
+        function deleteSavedDish(dishId) {
+            if (confirm('¿Eliminar este platillo?')) {
+                delete savedDishes[dishId];
+                saveData();
+                renderManagedDishes();
+            }
+        }
+
+        function deletePlate(mealType, plateId) {
+            const data = getTodayData();
+            data[mealType] = data[mealType].filter(p => p.id !== plateId);
+            saveData();
+            renderMeals();
+        }
+
+        function calculateTotals() {
+            const data = getTodayData();
+            let totals = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+            
+            Object.values(data).forEach(meal => {
+                meal.forEach(plate => {
+                    totals.calories += plate.calories;
+                    totals.protein += plate.protein;
+                    totals.carbs += plate.carbs;
+                    totals.fats += plate.fats;
+                });
+            });
+            
+            return totals;
+        }
+
+        function calculateMicros() {
+            const data = getTodayData();
+            let micros = {
+                iron: 0,
+                vitc: 0,
+                vitd: 0,
+                calcium: 0,
+                sodium: 0,
+                potassium: 0,
+                magnesium: 0,
+                zinc: 0
+            };
+            
+            Object.values(data).forEach(meal => {
+                meal.forEach(plate => {
+                    if (plate.micros) {
+                        const parts = plate.micros.split(',');
+                        parts.forEach(part => {
+                            const match = part.match(/(\w+):\s*([\d.]+)/i);
+                            if (match) {
+                                const name = match[1].trim().toLowerCase();
+                                const value = parseFloat(match[2]);
+                                if (name.includes('fe') || name.includes('iron')) micros.iron += value;
+                                if (name.includes('vit') && name.includes('c')) micros.vitc += value;
+                                if (name.includes('vit') && name.includes('d')) micros.vitd += value;
+                                if (name.includes('ca') || name.includes('calcium')) micros.calcium += value;
+                                if (name.includes('na') || name.includes('sodium')) micros.sodium += value;
+                                if (name.includes('k') || name.includes('potassium')) micros.potassium += value;
+                                if (name.includes('mg') || name.includes('magnesium')) micros.magnesium += value;
+                                if (name.includes('zn') || name.includes('zinc')) micros.zinc += value;
+                            }
+                        });
+                    }
+                });
+            });
+            
+            return micros;
+        }
+
+        function updateStats() {
+            const totals = calculateTotals();
+            document.getElementById('totalCals').textContent = Math.round(totals.calories);
+            document.getElementById('totalProtein').textContent = Math.round(totals.protein);
+            document.getElementById('totalCarbs').textContent = Math.round(totals.carbs);
+            document.getElementById('totalFats').textContent = Math.round(totals.fats);
+            
+            updateChart(totals);
+        }
+
+        function updateChart(totals) {
+            const ctx = document.getElementById('macroChart').getContext('2d');
+            
+            if (macroChart) macroChart.destroy();
+            
+            const proteinCals = totals.protein * 4;
+            const carbsCals = totals.carbs * 4;
+            const fatsCals = totals.fats * 9;
+            const total = proteinCals + carbsCals + fatsCals || 1;
+            
+            macroChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Proteína', 'Carbos', 'Grasas'],
+                    datasets: [{
+                        data: [
+                            Math.round((proteinCals / total) * 100),
+                            Math.round((carbsCals / total) * 100),
+                            Math.round((fatsCals / total) * 100)
+                        ],
+                        backgroundColor: ['#378ADD', '#639922', '#BA7517'],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 }, padding: 12, color: '#333' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMeals() {
+            const data = getTodayData();
+            ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(mealType => {
+                const container = document.getElementById(`${mealType}-meals`);
+                container.innerHTML = data[mealType].map(plate => `
+                    <div class="meal">
+                        <div class="meal-header">
+                            <div>
+                                <div class="meal-title">${plate.name}</div>
+                                <div class="macros-display">
+                                    <div class="macro"><div class="macro-val">${Math.round(plate.protein)}g</div>P</div>
+                                    <div class="macro"><div class="macro-val">${Math.round(plate.carbs)}g</div>C</div>
+                                    <div class="macro"><div class="macro-val">${Math.round(plate.fats)}g</div>G</div>
+                                </div>
+                            </div>
+                            <button class="plate-delete" onclick="deletePlate('${mealType}', ${plate.id})">×</button>
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 6px;">
+                            ${Math.round(plate.calories)} cal
+                            ${plate.micros ? `<br><span style="font-size: 11px;">${plate.micros}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            });
+            updateStats();
+        }
+
+        function renderWeightPage() {
+            const entries = Object.entries(weightData).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+            
+            const container = document.getElementById('weightHistory');
+            container.innerHTML = entries.map(([date, weight]) => {
+                const dateObj = new Date(date + 'T00:00:00');
+                const formatted = dateObj.toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric' });
+                return `
+                    <div class="weight-entry">
+                        <div style="">
+                            <div class="weight-date">${formatted}</div>
+                        </div>
+                        <div class="weight-value">${weight.toFixed(1)} kg</div>
+                    </div>
+                `;
+            }).join('');
+
+            if (entries.length > 0) {
+                updateWeightChart(entries);
+            }
+        }
+
+        function updateWeightChart(entries) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            if (weightChart) weightChart.destroy();
+            
+            const labels = entries.reverse().map(([date]) => {
+                const dateObj = new Date(date + 'T00:00:00');
+                return dateObj.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
+            });
+            
+            const data = entries.map(([, weight]) => weight);
+            
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: data,
+                        borderColor: '#378ADD',
+                        backgroundColor: 'rgba(55, 138, 221, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#378ADD'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12 }, color: '#333' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: { color: '#999' },
+                            grid: { color: '#e0e0e0' }
+                        },
+                        x: {
+                            ticks: { color: '#999' },
+                            grid: { color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMicrosPage() {
+            const micros = calculateMicros();
+            const container = document.getElementById('microcardsContainer');
+            
+            const microList = [
+                { key: 'iron', label: 'Hierro', unit: 'mg', value: micros.iron, goal: microGoals.iron },
+                { key: 'vitc', label: 'Vitamina C', unit: 'mg', value: micros.vitc, goal: microGoals.vitc },
+                { key: 'vitd', label: 'Vitamina D', unit: 'mcg', value: micros.vitd, goal: microGoals.vitd },
+                { key: 'calcium', label: 'Calcio', unit: 'mg', value: micros.calcium, goal: microGoals.calcium },
+                { key: 'sodium', label: 'Sodio', unit: 'mg', value: micros.sodium, goal: microGoals.sodium },
+                { key: 'potassium', label: 'Potasio', unit: 'mg', value: micros.potassium, goal: microGoals.potassium },
+                { key: 'magnesium', label: 'Magnesio', unit: 'mg', value: micros.magnesium, goal: microGoals.magnesium },
+                { key: 'zinc', label: 'Zinc', unit: 'mg', value: micros.zinc, goal: microGoals.zinc }
+            ];
+            
+            container.innerHTML = microList.map(micro => {
+                const percentage = Math.min((micro.value / micro.goal) * 100, 100);
+                return `
+                    <div class="micro-card">
+                        <div class="micro-name">${micro.label}</div>
+                        <div class="micro-current">${Math.round(micro.value * 10) / 10}${micro.unit}</div>
+                        <div class="micro-goal">Meta: ${micro.goal}${micro.unit}</div>
+                        <div class="micro-bar">
+                            <div class="micro-fill" style="width: ${percentage}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadData();
+        updateDateDisplay();
+        renderMeals();
+    </script>
+</body>
+</html>
